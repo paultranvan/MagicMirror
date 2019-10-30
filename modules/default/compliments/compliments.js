@@ -158,7 +158,15 @@ Module.register("compliments", {
 	},
 
 	// Override dom generator.
-	getDom: function () {
+	getDom: function() {
+		var complimentText;
+		if (this.forceCompliment) {
+			complimentText = this.complimentText;
+		} else {
+			complimentText = this.randomCompliment();
+		}
+
+		var compliment = document.createTextNode(complimentText);
 		var wrapper = document.createElement("div");
 		wrapper.className = this.config.classes ? this.config.classes : "thin xlarge bright pre-line";
 		// get the compliment text
@@ -206,10 +214,44 @@ Module.register("compliments", {
 		this.currentWeatherType = weatherIconTable[data.weather[0].icon];
 	},
 
+	pickRandomGreeting: function () {
+		var greetings = ["Bonjour", "Salut", "Hello", "Coucou", "Salutations",
+		 "Hey", "Yop"]
+		 var idx = Math.floor(Math.random() * greetings.length)
+		 return greetings[idx]
+	},
+
+	complimentBasedOnNames: function (names) {
+		if (names.length > 1) {
+			return "Ohla ! Que de monde !"
+		}
+		if (names[0] === "unknown") {
+			return "Oh mais je ne te connais pas ! Bonjour !"
+		}
+		if (names[0] === "pauline") {
+			return "Oh ! Mais c'est la jolie " + names[0]
+		}
+		return this.pickRandomGreeting() + " " + names[0] + " !"
+	},
+
+	setFaceCompliment: function(faceNames) {
+		if (faceNames.length == 0) {
+			return
+		}
+		var complimentText = this.complimentBasedOnNames(faceNames)
+
+		this.forceCompliment = true;
+		this.complimentText = complimentText;
+		this.updateDom(self.config.fadeSpeed);
+		this.forceCompliment = false;
+	},
+
 	// Override notification handler.
 	notificationReceived: function (notification, payload, sender) {
 		if (notification === "CURRENTWEATHER_DATA") {
 			this.setCurrentWeatherType(payload.data);
+		} else if(notification === "USERS_LOGIN") {
+			this.setFaceCompliment(payload)
 		}
 	}
 });
