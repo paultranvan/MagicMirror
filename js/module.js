@@ -175,8 +175,8 @@ var Module = Class.extend({
 			lstripBlocks: true
 		});
 
-		this._nunjucksEnvironment.addFilter("translate", function (str) {
-			return self.translate(str);
+		this._nunjucksEnvironment.addFilter("translate", function (str, variables) {
+			return nunjucks.runtime.markSafe(self.translate(str, variables));
 		});
 
 		return this._nunjucksEnvironment;
@@ -228,7 +228,7 @@ var Module = Class.extend({
 	 * Set the module config and combine it with the module defaults.
 	 *
 	 * @param {object} config The combined module config.
-	 * @param {boolean} config Merge module config in deep.
+	 * @param {boolean} deep Merge module config in deep.
 	 */
 	setConfig: function (config, deep) {
 		this.config = deep ? configMerge({}, this.defaults, config) : Object.assign({}, this.defaults, config);
@@ -311,33 +311,33 @@ var Module = Class.extend({
 	 *
 	 * @param {Function} callback Function called when done.
 	 */
-	loadTranslations: function (callback) {
-		var self = this;
-		var translations = this.getTranslations();
-		var lang = config.language.toLowerCase();
+	loadTranslations(callback) {
+		const translations = this.getTranslations() || {};
+		const language = config.language.toLowerCase();
 
-		// The variable `first` will contain the first
-		// defined translation after the following line.
-		for (var first in translations) {
-			break;
-		}
+		const languages = Object.keys(translations);
+		const fallbackLanguage = languages[0];
 
-		if (translations) {
-			var translationFile = translations[lang] || undefined;
-			var translationsFallbackFile = translations[first];
-
-			// If a translation file is set, load it and then also load the fallback translation file.
-			// Otherwise only load the fallback translation file.
-			if (translationFile !== undefined && translationFile !== translationsFallbackFile) {
-				Translator.load(self, translationFile, false, function () {
-					Translator.load(self, translationsFallbackFile, true, callback);
-				});
-			} else {
-				Translator.load(self, translationsFallbackFile, true, callback);
-			}
-		} else {
+		if (languages.length === 0) {
 			callback();
+			return;
 		}
+
+		const translationFile = translations[language];
+		const translationsFallbackFile = translations[fallbackLanguage];
+
+		if (!translationFile) {
+			Translator.load(this, translationsFallbackFile, true, callback);
+			return;
+		}
+
+		Translator.load(this, translationFile, false, () => {
+			if (translationFile !== translationsFallbackFile) {
+				Translator.load(this, translationsFallbackFile, true, callback);
+			} else {
+				callback();
+			}
+		});
 	},
 
 	/**
@@ -428,26 +428,27 @@ var Module = Class.extend({
 		callback = callback || function () {};
 		options = options || {};
 
-		var self = this;
 		MM.showModule(
 			this,
 			speed,
-			function () {
-				self.resume();
-				callback;
+			() => {
+				this.resume();
+				callback();
 			},
 			options
 		);
 	}
 });
 
-/** Merging MagicMirror (or other) default/config script
- * merge 2 objects or/with array
- * using:
+/**
+ * Merging MagicMirror (or other) default/config script by @bugsounet
+ * Merge 2 objects or/with array
+ *
+ * Usage:
  * -------
  * this.config = configMerge({}, this.defaults, this.config)
  * -------
- * arg1: initial objet
+ * arg1: initial object
  * arg2: config model
  * arg3: config to merge
  * -------
@@ -456,10 +457,12 @@ var Module = Class.extend({
  * it don't merge all thing in deep
  * -> object in object and array is not merging
  * -------
- * @bugsounet
- * @Todo: idea of Mich determinate what do you want to merge or not
+ *
+ * Todo: idea of Mich determinate what do you want to merge or not
+ *
+ * @param {object} result the initial object
+ * @returns {object} the merged config
  */
-
 function configMerge(result) {
 	var stack = Array.prototype.slice.call(arguments, 1);
 	var item;
@@ -506,7 +509,7 @@ Module.register = function (name, moduleDefinition) {
 		if (cmpVersions(window.version, moduleDefinition.requiresVersion) >= 0) {
 			Log.log("Version is ok!");
 		} else {
-			Log.log("Version is incorrect. Skip module: '" + name + "'");
+			Log.warn("Version is incorrect. Skip module: '" + name + "'");
 			return;
 		}
 	}
