@@ -14,7 +14,7 @@ Module.register("compliments", {
 			evening: ["Wow, you look hot!", "You look nice!", "Hi, sexy!"],
 			"....-01-01": ["Happy new year!"]
 		},
-		updateInterval: 30000,
+		updateInterval: 15000,
 		remoteFile: null,
 		fadeSpeed: 4000,
 		morningStartTime: 3,
@@ -86,8 +86,8 @@ Module.register("compliments", {
 	 * return compliments Array<String> - Array with compliments for the time of the day.
 	 */
 	complimentArray: function () {
-		var hour = moment().hour();
-		var date = this.config.mockDate ? this.config.mockDate : moment().format("YYYY-MM-DD");
+		const date = this.getCurrentDate();
+		const hour = moment().hour();
 		var compliments;
 
 		if (hour >= this.config.morningStartTime && hour < this.config.morningEndTime && this.config.compliments.hasOwnProperty("morning")) {
@@ -108,13 +108,24 @@ Module.register("compliments", {
 
 		compliments.push.apply(compliments, this.config.compliments.anytime);
 
+		return compliments;
+	},
+
+	getCurrentDate: function () {
+		const date = this.config.mockDate ? this.config.mockDate : moment().format("YYYY-MM-DD");
+		return date;
+	},
+
+	complimentsByDate: function () {
+		const date = this.getCurrentDate();
+		const complimentsByDate = [];
 		for (var entry in this.config.compliments) {
 			if (new RegExp(entry).test(date)) {
-				compliments.push.apply(compliments, this.config.compliments[entry]);
+				// Compliment matching the current date
+				complimentsByDate.push(...this.config.compliments[entry]);
 			}
 		}
-
-		return compliments;
+		return complimentsByDate;
 	},
 
 	/* complimentFile(callback)
@@ -140,37 +151,37 @@ Module.register("compliments", {
 	 * return compliment string - A compliment.
 	 */
 	randomCompliment: function () {
-		// get the current time of day compliments list
-		var compliments = this.complimentArray();
-		// variable for index to next message to display
-		let index = 0;
+		const compliments = this.complimentArray();
+		const complimentsByDate = this.complimentsByDate();
+		let complimentText = "";
 		// are we randomizing
 		if (this.config.random) {
-			// yes
-			index = this.randomIndex(compliments);
+			if (complimentsByDate.length > 0) {
+				// 50% chance to pick a compliment by date, if any
+				const idx = Math.floor(Math.random() * 2);
+				complimentText = idx === 0 ? complimentsByDate[this.randomIndex(complimentsByDate)] : compliments[this.randomIndex(compliments)];
+			} else {
+				complimentText = compliments[this.randomIndex(compliments)];
+			}
 		} else {
 			// no, sequential
 			// if doing sequential, don't fall off the end
-			index = this.lastIndexUsed >= compliments.length - 1 ? 0 : ++this.lastIndexUsed;
+			const index = this.lastIndexUsed >= compliments.length - 1 ? 0 : ++this.lastIndexUsed;
+			complimentText = compliments[index];
 		}
-
-		return compliments[index] || "";
+		return complimentText || "";
 	},
 
 	// Override dom generator.
-	getDom: function() {
+	getDom: function () {
 		var complimentText;
 		if (this.forceCompliment) {
 			complimentText = this.complimentText;
 		} else {
 			complimentText = this.randomCompliment();
 		}
-
-		var compliment = document.createTextNode(complimentText);
 		var wrapper = document.createElement("div");
 		wrapper.className = this.config.classes ? this.config.classes : "thin xlarge bright pre-line";
-		// get the compliment text
-		var complimentText = this.randomCompliment();
 		// split it into parts on newline text
 		var parts = complimentText.split("\n");
 		// create a span to hold it all
@@ -215,31 +226,29 @@ Module.register("compliments", {
 	},
 
 	pickRandomGreeting: function () {
-		var greetings = ["Bonjour", "Salut", "Hello", "Coucou", "Salutations",
-		 "Hey", "Yop"]
-		 var idx = Math.floor(Math.random() * greetings.length)
-		 return greetings[idx]
+		var greetings = ["Bonjour", "Salut", "Hello", "Coucou", "Salutations", "Hey", "Yop"];
+		var idx = Math.floor(Math.random() * greetings.length);
+		return greetings[idx];
 	},
 
 	complimentBasedOnNames: function (names) {
 		if (names.length > 1) {
-			return "Ohla ! Que de monde !"
+			return "Ohla ! Que de monde !";
 		}
 		if (names[0] === "unknown") {
-			return "Oh mais je ne te connais pas ! Bonjour !"
+			return "Oh mais je ne te connais pas ! Bonjour !";
 		}
 		if (names[0] === "pauline") {
-			return "Oh ! Mais c'est la jolie " + names[0]
+			return "Oh ! Mais c'est la jolie " + names[0];
 		}
-		return this.pickRandomGreeting() + " " + names[0] + " !"
+		return this.pickRandomGreeting() + " " + names[0] + " !";
 	},
 
-	setFaceCompliment: function(faceNames) {
-		if (faceNames.length == 0) {
-			return
+	setFaceCompliment: function (faceNames) {
+		if (faceNames.length === 0) {
+			return;
 		}
-		var complimentText = this.complimentBasedOnNames(faceNames)
-
+		var complimentText = this.complimentBasedOnNames(faceNames);
 		this.forceCompliment = true;
 		this.complimentText = complimentText;
 		this.updateDom(self.config.fadeSpeed);
@@ -250,8 +259,8 @@ Module.register("compliments", {
 	notificationReceived: function (notification, payload, sender) {
 		if (notification === "CURRENTWEATHER_DATA") {
 			this.setCurrentWeatherType(payload.data);
-		} else if(notification === "USERS_LOGIN") {
-			this.setFaceCompliment(payload)
+		} else if (notification === "USERS_LOGIN") {
+			this.setFaceCompliment(payload);
 		}
 	}
 });
