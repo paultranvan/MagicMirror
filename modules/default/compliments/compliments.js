@@ -257,9 +257,8 @@ Module.register("compliments", {
 
 	// Override notification handler.
 	notificationReceived: function (notification, payload, sender) {
-		if (notification === "CURRENTWEATHER_DATA") {
-			//CURRENTWEATHER_TYPE
-			this.setCurrentWeatherType(payload.data);
+		if (notification === "CURRENTWEATHER_TYPE") {
+			this.setCurrentWeatherType(payload.type);
 		} else if (notification === "USERS_LOGIN") {
 			this.setFaceCompliment(payload);
 		}
