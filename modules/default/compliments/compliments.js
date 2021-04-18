@@ -248,7 +248,11 @@ Module.register("compliments", {
 		if (faceNames.length === 0) {
 			return;
 		}
-		var complimentText = this.complimentBasedOnNames(faceNames);
+		const complimentText = this.complimentBasedOnNames(faceNames);
+		this.sendNotification("MMM-NanoTTS", {
+			fromModule: this.name,
+			text: complimentText
+		});
 		this.forceCompliment = true;
 		this.complimentText = complimentText;
 		this.updateDom(self.config.fadeSpeed);
