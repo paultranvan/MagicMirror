@@ -4,6 +4,11 @@
  * By Michael Teeuw https://michaelteeuw.nl
  * MIT Licensed.
  */
+
+const capitalize = (name) => {
+	return name.charAt(0).toUpperCase() + name.slice(1);
+};
+
 Module.register("compliments", {
 	// Module config defaults.
 	defaults: {
@@ -206,22 +211,37 @@ Module.register("compliments", {
 	},
 
 	pickRandomGreeting: function () {
-		var greetings = ["Bonjour", "Salut", "Hello", "Coucou", "Salutations", "Hey", "Yop"];
-		var idx = Math.floor(Math.random() * greetings.length);
+		const greetings = this.config.compliments["greetings"];
+		const idx = Math.floor(Math.random() * greetings.length);
 		return greetings[idx];
 	},
 
+	pickRandomComplimentForPerson: function (name) {
+		let compliments = [];
+		compliments = this.config.compliments["anyone"];
+		if (name in this.config.compliments) {
+			// 50% chance to pick personalized compliment
+			const idx = Math.floor(Math.random() * 2);
+			if (idx === 0) {
+				compliments = this.config.compliments[name];
+			}
+		}
+		return compliments[this.randomIndex(compliments)];
+	},
+
 	complimentBasedOnNames: function (names) {
-		if (names.length > 1) {
-			return "Ohla ! Que de monde !";
+		const capitalizedNames = names.map((name) => capitalize(name));
+		if (names.length === 1 && names[0] === "unknown") {
+			return this.config.compliments["unknown"][0];
 		}
-		if (names[0] === "unknown") {
-			return "Oh mais je ne te connais pas ! Bonjour !";
+		const persons = capitalizedNames.filter((name) => name !== "Unknown");
+		const personsText = persons.length > 1 ? persons.slice(0, -1).join(", et ") + persons.slice(-1) : persons[0];
+
+		const greetings = `${this.pickRandomGreeting()} ${personsText}`;
+		if (persons.length === 1) {
+			return `${greetings}, ${this.pickRandomComplimentForPerson(names[0])}`;
 		}
-		if (names[0] === "pauline") {
-			return "Oh ! Mais c'est la jolie " + names[0];
-		}
-		return this.pickRandomGreeting() + " " + names[0] + " !";
+		return greetings;
 	},
 
 	setFaceCompliment: function (faceNames) {
