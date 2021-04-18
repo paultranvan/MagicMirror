@@ -53,9 +53,19 @@ Module.register("compliments", {
 		}
 
 		// Schedule update timer.
-		setInterval(function () {
+		this.timer = this.startTimer();
+	},
+
+	startTimer: function () {
+		const self = this;
+		return setInterval(function () {
 			self.updateDom(self.config.fadeSpeed);
 		}, this.config.updateInterval);
+	},
+
+	restartTimer: function () {
+		clearInterval(this.timer);
+		this.timer = this.startTimer();
 	},
 
 	/* randomIndex(compliments)
@@ -255,6 +265,7 @@ Module.register("compliments", {
 		});
 		this.forceCompliment = true;
 		this.complimentText = complimentText;
+		this.restartTimer();
 		this.updateDom(self.config.fadeSpeed);
 		this.forceCompliment = false;
 	},
